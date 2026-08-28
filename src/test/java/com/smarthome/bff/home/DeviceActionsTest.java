@@ -102,4 +102,43 @@ class DeviceActionsTest {
         assertThatThrownBy(() -> DeviceActions.toChanges(descriptor("[]"), "turn_on", null))
                 .isInstanceOf(DeviceActions.NotProvisionedException.class);
     }
+
+    @Test
+    void brightnessRangeComesFromTheDescriptorWhenItOverridesTheDefault() {
+        JsonNode narrow = descriptor("""
+                [{"trait":"brightness","commands":["set_brightness"],"state":["brightness"],
+                  "params":{"set_brightness":{"min":10,"max":90}}}]""");
+
+        assertThat(DeviceActions.toChanges(narrow, "set_brightness", 90.0)).isEqualTo(Map.of("brightness", 90));
+        assertThatThrownBy(() -> DeviceActions.toChanges(narrow, "set_brightness", 5.0))
+                .hasMessageContaining("between 10 and 90");
+        assertThatThrownBy(() -> DeviceActions.toChanges(narrow, "set_brightness", 95.0))
+                .hasMessageContaining("between 10 and 90");
+    }
+
+    @Test
+    void temperatureFallsBackToTheDefaultRangeWhenTheDescriptorHasNoParams() {
+        JsonNode noParams = descriptor("""
+                [{"trait":"thermostat","commands":["set_temperature"],"state":["temperature"]}]""");
+
+        assertThat(DeviceActions.toChanges(noParams, "set_temperature", 30.0)).isEqualTo(Map.of("temperature", 30.0));
+        assertThatThrownBy(() -> DeviceActions.toChanges(noParams, "set_temperature", 15.0))
+                .hasMessageContaining("between 16 and 30");
+    }
+
+    @Test
+    void fractionalBoundsAreShownWithoutTrailingZeros() {
+        JsonNode fractional = descriptor("""
+                [{"trait":"thermostat","commands":["set_temperature"],"state":["temperature"],
+                  "params":{"set_temperature":{"min":16.5,"max":29.5}}}]""");
+
+        assertThatThrownBy(() -> DeviceActions.toChanges(fractional, "set_temperature", 16.0))
+                .hasMessageContaining("between 16.5 and 29.5");
+    }
+
+    @Test
+    void setTemperatureWithoutAValueIsRejected() {
+        assertThatThrownBy(() -> DeviceActions.toChanges(AC, "set_temperature", null))
+                .hasMessageContaining("requires a numeric value");
+    }
 }
