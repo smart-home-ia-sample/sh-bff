@@ -1,0 +1,41 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write # jacoco-report posts a sticky coverage comment
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21", cache: maven }
+
+      # Runs the suite, writes target/site/jacoco/jacoco.xml, and fails via
+      # jacoco:check when coverage drops below jacoco.line.min / jacoco.branch.min
+      # in pom.xml -- that failure is the "test / coverage" gate the ruleset needs.
+      - run: ./mvnw -B test
+
+      - name: Coverage comment
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        uses: madrapps/jacoco-report@v1.7.2
+        with:
+          paths: ${{ github.workspace }}/target/site/jacoco/jacoco.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: Coverage
+          min-coverage-overall: 65
+          min-coverage-changed-files: 65
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
+          retention-days: 14

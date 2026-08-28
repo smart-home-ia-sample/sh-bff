@@ -1,4 +1,10 @@
+# keep the build context small: the image builds from pom.xml + src only
 target
-.git
 data
+.git
+.github
+.idea
+*.iml
+.vscode
 *.md
+.env

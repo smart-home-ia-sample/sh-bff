@@ -1,4 +1,23 @@
+# build
 target/
-.env
-data/
 *.class
+
+# runtime / local
+data/
+.env
+*.log
+
+# tooling
+HELP.md
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+nb-configuration.xml

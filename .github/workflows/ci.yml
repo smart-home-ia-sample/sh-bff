@@ -2,28 +2,36 @@ name: ci
 on:
   push: { branches: [main] }
   pull_request:
-env:
-  IMAGE: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: "21", cache: maven }
-      - run: ./mvnw -B test
+  # Builds the image on every PR (validates the Dockerfile); on main it also
+  # pushes to GHCR. Tests/coverage live in test.yml, CodeQL in codeql.yml.
   image:
-    if: github.ref == 'refs/heads/main'
-    needs: test
     runs-on: ubuntu-latest
-    permissions: { contents: read, packages: write }
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with: { registry: ghcr.io, username: ${{ github.actor }}, password: ${{ secrets.GITHUB_TOKEN }} }
+
+      - name: Log in to GHCR
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
-          tags: ${{ env.IMAGE }}:latest,${{ env.IMAGE }}:${{ github.sha }}
-          build-args: FRONT_DIST_URL=${{ vars.FRONT_DIST_URL }}
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          # Build the SPA from sh-frontend on the branch that matches this build
+          # (PR source branch, or the pushed branch); the Dockerfile falls back
+          # to sh-frontend/main when that branch doesn't exist there.
+          build-args: |
+            FRONT_SOURCE=git
+            FRONT_REF=${{ github.head_ref || github.ref_name }}
