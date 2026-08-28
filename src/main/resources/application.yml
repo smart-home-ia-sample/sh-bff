@@ -1,0 +1,55 @@
+server:
+  port: 8080
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: bff
+  datasource:
+    # Point DB_URL/DB_USERNAME/DB_PASSWORD at an external Postgres to run
+    # stateless/replicated. Unset -> embedded H2 file (single instance).
+    url: ${DB_URL:jdbc:h2:file:./data/bff;AUTO_SERVER=TRUE}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+    # driver + Hibernate dialect are auto-detected from the JDBC URL.
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  web:
+    resources:
+      # SPA build lands here at image build time; unknown non-/api paths fall back to index.html
+      static-locations: classpath:/static/
+
+bff:
+  orchestrator-url: ${ORCHESTRATOR_URL:http://orchestrator:8500}
+  mqtt:
+    enabled: ${MQTT_ENABLED:true}
+    host: ${MQTT_HOST:mosquitto}
+    port: ${MQTT_PORT:1883}
+    username: ${MQTT_USERNAME:smarthome}
+    password: ${MQTT_PASSWORD:smarthome}
+    command-timeout-ms: ${MQTT_COMMAND_TIMEOUT_MS:5000}
+  auth:
+    # HS256 needs >= 32 bytes. Override in every real environment via JWT_SECRET.
+    jwt-secret: ${JWT_SECRET:dev-only-insecure-secret-change-me-please-0123456789}
+    token-ttl-minutes: 60
+    demo-user: ${DEMO_USER:demo}
+    # bcrypt hash of "demo" (dev default); override via DEMO_PASS_HASH.
+    demo-pass-hash: ${DEMO_PASS_HASH:$2a$10$cOe5vx01IAYIuQHblX5nYuQU5Q32Z88XHF1gDNuF.fbkx2.uSC/GK}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}

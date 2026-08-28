@@ -1,0 +1,17 @@
+# Overrides layered on top of the real src/main application.yml (profile: test).
+spring:
+  datasource:
+    url: jdbc:h2:mem:bff-test;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+bff:
+  orchestrator-url: http://localhost:59999
+  mqtt:
+    enabled: false
+  auth:
+    jwt-secret: test-secret-test-secret-test-secret-0123456789
+    demo-pass-hash: $2a$10$cOe5vx01IAYIuQHblX5nYuQU5Q32Z88XHF1gDNuF.fbkx2.uSC/GK
